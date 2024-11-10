@@ -35,15 +35,10 @@ def process_queue(loop, context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("Help", callback_data="help")],
         [InlineKeyboardButton("📝 Send Prompt", callback_data="text_to_video")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Welcome! Choose an option:", reply_markup=reply_markup)
-
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("This bot helps you generate a videos from a text prompt. Use /send_prompt to get started!")
 
 
 async def text_to_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,16 +61,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if query.data == "help":
-        await help_command(query, context)
-    elif query.data == "text_to_video":
+    if query.data == "text_to_video":
         await text_to_video(query, context)
 
 
 async def post_init(application: Application):
     # Configure commands in the bot menu
     await application.bot.set_my_commands([
-        ("help", "Get help information"),
         ("send_prompt", "Generate a Video from a text prompt"),
     ])
 
@@ -85,7 +77,6 @@ def main():
         config.TELEGRAM_BOT_TOKEN).post_init(post_init=post_init).build()
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("send_prompt", text_to_video))
 
     application.add_handler(CallbackQueryHandler(button_handler))
