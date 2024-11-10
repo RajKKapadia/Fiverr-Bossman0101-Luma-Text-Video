@@ -17,47 +17,47 @@ logging.basicConfig(
 task_queue = queue.Queue()
 
 
-async def three_d_long_running_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int | str, prompt: str):
+async def video_long_running_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int | str, prompt: str):
     video_urls, status = await call_luma_api_text_to_video(prompt=prompt)
     if status:
         await context.bot.send_video(chat_id=chat_id, video=video_urls[0])
     else:
-        await context.bot.send_message(chat_id=chat_id, text="We are facing an issue generating 3D video at this moment.")
+        await context.bot.send_message(chat_id=chat_id, text="We are facing an issue generating a video at this moment.")
 
 
 def process_queue(loop, context: ContextTypes.DEFAULT_TYPE):
     while not task_queue.empty():
         chat_id, task_type, prompt = task_queue.get()
-        if task_type == "3d":
+        if task_type == "video":
             asyncio.run_coroutine_threadsafe(
-                three_d_long_running_task(context, chat_id, prompt), loop)
+                video_long_running_task(context, chat_id, prompt), loop)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Help", callback_data="help")],
-        [InlineKeyboardButton("Send Prompt", callback_data="text_to_3d")],
+        [InlineKeyboardButton("Send Prompt", callback_data="text_to_video")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Welcome! Choose an option:", reply_markup=reply_markup)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("This bot helps you generate 3D videos from text prompts. Use /send_prompt to get started!")
+    await update.message.reply_text("This bot helps you generate a videos from a text prompt. Use /send_prompt to get started!")
 
 
-async def text_to_3d(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Please provide a prompt to generate a 3D image.")
-    context.user_data["awaiting_3d_prompt"] = True
+async def text_to_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Please provide a prompt to generate your Video in minutes.")
+    context.user_data["awaiting_video_prompt"] = True
 
 
 async def handle_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     prompt = update.message.text
-    if context.user_data.get("awaiting_3d_prompt"):
-        await update.message.reply_text("Generating a 3D image, it may take up to 6 minutes.")
-        context.user_data["awaiting_3d_prompt"] = False
-        task_queue.put((chat_id, "3d", prompt))
+    if context.user_data.get("awaiting_video_prompt"):
+        await update.message.reply_text("Generating your video.")
+        context.user_data["awaiting_video_prompt"] = False
+        task_queue.put((chat_id, "video", prompt))
         loop = asyncio.get_running_loop()
         threading.Thread(target=process_queue, args=(loop, context)).start()
 
@@ -68,15 +68,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "help":
         await help_command(query, context)
-    elif query.data == "text_to_3d":
-        await text_to_3d(query, context)
+    elif query.data == "text_to_video":
+        await text_to_video(query, context)
 
 
 async def post_init(application: Application):
     # Configure commands in the bot menu
     await application.bot.set_my_commands([
         ("help", "Get help information"),
-        ("send_prompt", "Generate a 3D image from a text prompt"),
+        ("send_prompt", "Generate a Video from a text prompt"),
     ])
 
 
@@ -86,7 +86,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("send_prompt", text_to_3d))
+    application.add_handler(CommandHandler("send_prompt", text_to_video))
 
     application.add_handler(CallbackQueryHandler(button_handler))
 
