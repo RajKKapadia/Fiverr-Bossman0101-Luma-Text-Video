@@ -36,7 +36,7 @@ def process_queue(loop, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Help", callback_data="help")],
-        [InlineKeyboardButton("Send Prompt", callback_data="text_to_video")],
+        [InlineKeyboardButton("📝 Send Prompt", callback_data="text_to_video")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Welcome! Choose an option:", reply_markup=reply_markup)
