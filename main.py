@@ -2,6 +2,7 @@ import threading
 import queue
 import asyncio
 import logging
+import time
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters, Application
@@ -17,8 +18,51 @@ logging.basicConfig(
 task_queue = queue.Queue()
 
 
+async def update_progress_bar(context: ContextTypes.DEFAULT_TYPE, chat_id: int | str, message_id: int, start_time: float):
+    progress_chars = ["⬜️", "⬜️", "⬜️", "⬜️",
+                      "⬜️", "⬜️", "⬜️", "⬜️", "⬜️", "⬜️"]
+    max_duration = 60
+    while True:
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= max_duration:
+            break
+        progress = min(elapsed_time / max_duration, 1.0)
+        filled_chars = int(progress * len(progress_chars))
+        progress_bar = ""
+        for i in range(len(progress_chars)):
+            if i < filled_chars:
+                progress_bar += "🟩"
+            else:
+                progress_bar += "⬜️"
+        status_text = f"Generating Video...\n{progress_bar}\n{int(elapsed_time)}s elapsed"
+        try:
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=status_text
+            )
+        except Exception as e:
+            logging.error(f"Error updating progress bar: {e}")
+            break
+        await asyncio.sleep(3)
+
+
 async def video_long_running_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int | str, prompt: str):
+    progress_message = await context.bot.send_message(
+        chat_id=chat_id,
+        text="Starting Video generation...\n⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️\n0s elapsed"
+    )
+    start_time = time.time()
+    progress_task = asyncio.create_task(
+        update_progress_bar(
+            context, chat_id, progress_message.message_id, start_time)
+    )
     video_urls, status = await call_luma_api_text_to_video(prompt=prompt)
+    progress_task.cancel()
+    await context.bot.delete_message(
+        chat_id=chat_id,
+        message_id=progress_message.message_id
+    )
     if status:
         await context.bot.send_video(chat_id=chat_id, video=video_urls[0])
     else:
